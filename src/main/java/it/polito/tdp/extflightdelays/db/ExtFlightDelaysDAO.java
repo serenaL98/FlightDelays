@@ -7,10 +7,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import it.polito.tdp.extflightdelays.model.Airline;
 import it.polito.tdp.extflightdelays.model.Airport;
 import it.polito.tdp.extflightdelays.model.Flight;
+import it.polito.tdp.extflightdelays.model.Rotta;
 
 public class ExtFlightDelaysDAO {
 
@@ -90,5 +92,66 @@ public class ExtFlightDelaysDAO {
 			System.out.println("Errore connessione al database");
 			throw new RuntimeException("Error Connection Database");
 		}
+	}
+	
+	//creo un metodo che mi dia x compagnie aeree
+	public int getAirlinesNumber(Airport a) {
+		String sql = "SELECT COUNT(DISTINCT airline_id) AS tot" + 
+				" FROM flights" + 
+				" WHERE (ORIGIN_AIRPORT_ID = ? ) || (DESTINATION_AIRPORT_ID = ? )";
+		int ris =0;
+		
+		try {
+			Connection con = ConnectDB.getConnection();
+			PreparedStatement st = con.prepareStatement(sql);
+			st.setInt(1, a.getId());
+			st.setInt(2, a.getId());
+			ResultSet res = st.executeQuery();
+			
+			while(res.next()) {
+				ris = res.getInt("tot");
+			}
+			
+			con.close();
+			
+			return ris;
+			
+		}catch(SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return 0;
+	}
+
+	public List<Rotta> getRotte(Map<Integer, Airport> idMap) {
+		String sql = " SELECT ORIGIN_AIRPORT_ID, DESTINATION_AIRPORT_ID, COUNT(*) AS tot"
+				+" FROM flights"
+				+" GROUP BY ORIGIN_AIRPORT_ID, DESTINATION_AIRPORT_ID";
+		List<Rotta> lista = new ArrayList<>();
+		
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet res = st.executeQuery();
+			
+			while(res.next()) {
+				Airport sorg = idMap.get(res.getInt("ORIGIN_AIRPORT_ID"));
+				Airport dest = idMap.get(res.getInt("DESTINATION_AIRPORT_ID"));
+				if (sorg != null &&  dest!= null) {
+					lista.add(new Rotta (sorg, dest, res.getInt("tot")));
+				}else {
+					System.out.println("ERRORE NELLE ROTTE.");
+				}
+			}
+			
+			conn.close();
+			
+			return lista;
+			
+		}catch(SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
 	}
 }
